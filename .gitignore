@@ -1,0 +1,6 @@
+.env
+*.pyc
+__pycache__/
+xp_state.json
+xp_targets.json
+.venv/
