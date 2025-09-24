@@ -6,6 +6,5 @@
 
 DISCORD_TOKEN=... (discord token a recuperer sur le site https://discord.com/login?redirect_to=%2Fdevelopers%2Fapplications) 
 DISCORD_CHANNEL_ID=1418182282971320411 #AMODIFIER
-# Intervalle en secondes (optionnel, défaut 3.5)
 POLL_INTERVAL=10
 GUILD_ID=1417905797979181220 #AMODIFIER PAR DEFAUT , ID DU DISCORD LASTDANSE
