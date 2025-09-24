@@ -54,14 +54,11 @@ def load_json(path: Path, default):
 def save_json(path: Path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
-# Charge l'état + cibles (compat liste -> dict)
 STATE: Dict[str, Dict] = load_json(STATE_FILE, {})
 _raw_watch = load_json(WATCH_FILE, [])
 if isinstance(_raw_watch, list):
-    # Migration: ancienne version (liste d'IDs) -> dict id -> []
     WATCH: Dict[str, List[int]] = {cid: [] for cid in _raw_watch if isinstance(cid, str)}
 else:
-    # Normal: dict id -> [user_ids]
     WATCH = {str(k): [int(u) for u in set(v) if isinstance(u, int) or str(u).isdigit()]
              for k, v in _raw_watch.items()} if isinstance(_raw_watch, dict) else {}
 
@@ -96,7 +93,6 @@ def build_char_url_3digits(base_id: str, value: int) -> str:
     return f"https://bubble-portal.com/api/characters/Thana/{new_id}"
 
 
-# remplace ton fetch_char_xp par ceci
 async def fetch_char_info(char_url: str) -> tuple[int | None, str | None]:
     """
     Retourne (xp, name) via l'API JSON, ou (None, None) si erreur.
@@ -127,7 +123,6 @@ async def run_precise_xp_tracker(channel_obj: discord.TextChannel, base_id: str)
           • au lancement (XP initial)
           • uniquement quand l'XP augmente
           • en affichant une durée estimée depuis la dernière augmentation
-          • un message final à la fin
     """
     end_time = datetime.now() + timedelta(seconds=TRACK_DURATION_SECONDS)
     last_xp: int | None = None
@@ -150,20 +145,19 @@ async def run_precise_xp_tracker(channel_obj: discord.TextChannel, base_id: str)
             print(f"[trackxp] XP returned: {xp} | name: {name}")  # log console
 
             if name and not current_name:
-                current_name = name  # on fige le nom dès qu'on l'obtient
+                current_name = name 
 
             if xp is not None:
                 now = datetime.now()
 
                 if last_xp is None:
-                    # Première valeur -> annonce initiale
                     last_xp = xp
                     last_time = now
                     who = f"**{current_name}**" if current_name else "le personnage"
                     await channel_obj.send(f"📌 XP initial pour {who} : **{last_xp:,}**".replace(",", " "))
 
                 elif xp > last_xp:
-                    # Durée estimée depuis la dernière augmentation
+                    # Durée estimée depuis la dernière augmentation ne prend pas en compte le temps de trouver un autre cbt
                     elapsed = now - (last_time or now)
                     last_time = now
 
@@ -179,10 +173,8 @@ async def run_precise_xp_tracker(channel_obj: discord.TextChannel, base_id: str)
                     await channel_obj.send(msg)
 
                 elif xp < last_xp:
-                    # Valeur plus petite -> ignorée
                     print(f"[trackxp] XP decreased ({xp} < {last_xp}) — ignored")
 
-            # Avancer le compteur
             counter = counter + 1 if counter < 999 else 1
             await asyncio.sleep(TRACK_INTERVAL_SECONDS)
 
@@ -261,7 +253,6 @@ async def notify_xp_change(char_id: str, before: int, after: int, name: str, lev
     # ➜ ENVOI DANS LE SALON DÉDIÉ
     global notify_channel
     if notify_channel is None:
-        # tentative de résolution à la volée (au cas où on_ready n’a pas réussi)
         try:
             guild = client.get_guild(NOTIFY_GUILD_ID)
             if guild:
@@ -341,7 +332,6 @@ async def add_cmd(
 
         save_json(WATCH_FILE, WATCH)
 
-        # Seed / MAJ STATE
         entry = STATE.get(char_id, {})
         entry.update({
             "last_xp": xp,
@@ -614,10 +604,10 @@ async def on_ready():
     session = aiohttp.ClientSession()
 
     try:
-        GUILD_ID = 1417905797979181220 #last danse
+        GUILD_ID = 1417905797979181220 #ID DU DISCORD last danse
         guild = discord.Object(id=GUILD_ID)
 
-        # 🔄 Reset + sync des commandes uniquement pour la guilde (instantané)
+        # ACTUALISE LES COMMANDES
         tree.clear_commands(guild=guild)
         tree.copy_global_to(guild=guild)
         await tree.sync(guild=guild)
@@ -627,7 +617,7 @@ async def on_ready():
     except Exception as e:
         print(f"[on_ready] Erreur sync commands: {e}")
 
-    # ➜ Résoudre le salon de notification dédié
+   
     try:
         guild_obj = client.get_guild(1417905797979181220)
         if guild_obj:
